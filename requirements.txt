@@ -1,0 +1,8 @@
+matplotlib
+scikit-learn
+scikit-image
+tqdm
+prettytable
+cityscapesscripts
+mmsegmentation==0.27.0
+pyEdgeEval >= 0.2.0
