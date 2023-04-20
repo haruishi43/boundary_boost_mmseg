@@ -2,6 +2,14 @@
 
 This repository contains the code for our paper "Boosting Semantic Segmentation with Semantic Boundaries".
 
+```
+@article{ishikawa2023SBDboost,
+  title={Boosting Semantic Segmentation with Semantic Boundaries},
+  author={Ishikawa, Haruya and Aoki Yoshimitsu},
+  journal={arXiv preprint arXiv: http://arxiv.org/abs/2304.09427},
+  year={2023}
+}
+```
 ## Guides
 
 - [Installation/Setup](.readme/installation.md)
