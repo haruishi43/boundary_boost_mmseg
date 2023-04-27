@@ -19,3 +19,4 @@ This repository contains the code for our paper "Boosting Semantic Segmentation 
 - [Reproducing results for used in our paper](.readme/reproduce.md)
   - Guides for reproducing the results in our paper
   - Currently supports DeepLabV3, DeepLabV3+, and PSPNet
+  - 4/27: Also added configs for SegFormer
