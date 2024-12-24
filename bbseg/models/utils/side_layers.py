@@ -3,8 +3,8 @@
 import torch.nn as nn
 
 from mmcv.cnn import ConvModule
-from mmseg.ops import resize
 from mmseg.models.backbones.resnet import BasicBlock
+from mmseg.models.utils import resize
 
 
 class SideConv(nn.Module):

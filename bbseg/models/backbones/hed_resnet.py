@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Modified ResNet
+"""HED-ResNet
 
 difference:
 - added `return_stem`
@@ -10,15 +10,13 @@ difference:
 import torch.nn as nn
 
 from mmcv.cnn import build_conv_layer, build_norm_layer
-from mmseg.models.backbones.resnet import (
-    ResNet as MMSEG_ResNet,
-)
+from mmseg.models.backbones.resnet import ResNet
 
-from ..builder import BACKBONES
+from mmseg.registry import MODELS
 
 
-@BACKBONES.register_module(force=True)
-class ResNet(MMSEG_ResNet):
+@MODELS.register_module()
+class HEDResNet(ResNet):
     def __init__(
         self,
         stem_kernel_size=7,
@@ -26,14 +24,14 @@ class ResNet(MMSEG_ResNet):
         stem_padding_size=3,
         return_stem=False,
         **kwargs,
-    ):
+    ) -> None:
         self.stem_kwargs = dict(
             kernel_size=stem_kernel_size,
             stride_size=stem_stride_size,
             padding_size=stem_padding_size,
         )
         self.return_stem = return_stem
-        super(ResNet, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def _make_stem_layer(
         self,
@@ -121,11 +119,12 @@ class ResNet(MMSEG_ResNet):
             x = res_layer(x)
             if i in self.out_indices:
                 outs.append(x)
+
         return tuple(outs)
 
 
-@BACKBONES.register_module(force=True)
-class ResNetV1c(ResNet):
+@MODELS.register_module(force=True)
+class HEDResNetV1c(HEDResNet):
     """ResNetV1c variant described in [1]_.
 
     Compared with default ResNet(ResNetV1b), ResNetV1c replaces the 7x7 conv in
@@ -135,11 +134,11 @@ class ResNetV1c(ResNet):
     """
 
     def __init__(self, **kwargs):
-        super(ResNetV1c, self).__init__(deep_stem=True, avg_down=False, **kwargs)
+        super().__init__(deep_stem=True, avg_down=False, **kwargs)
 
 
-@BACKBONES.register_module(force=True)
-class ResNetV1d(ResNet):
+@MODELS.register_module(force=True)
+class HEDResNetV1d(HEDResNet):
     """ResNetV1d variant described in [1]_.
 
     Compared with default ResNet(ResNetV1b), ResNetV1d replaces the 7x7 conv in
@@ -148,4 +147,4 @@ class ResNetV1d(ResNet):
     """
 
     def __init__(self, **kwargs):
-        super(ResNetV1d, self).__init__(deep_stem=True, avg_down=True, **kwargs)
+        super().__init__(deep_stem=True, avg_down=True, **kwargs)

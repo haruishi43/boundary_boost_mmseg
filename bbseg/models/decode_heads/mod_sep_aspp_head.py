@@ -2,15 +2,15 @@
 
 import torch
 import torch.nn as nn
+
 from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
+from mmseg.registry import MODELS
 from mmseg.models.decode_heads.aspp_head import ASPPHead
 from mmseg.models.decode_heads.sep_aspp_head import DepthwiseSeparableASPPModule
-from mmseg.ops import resize
-
-from ..builder import HEADS
+from mmseg.models.utils import resize
 
 
-@HEADS.register_module()
+@MODELS.register_module()
 class ModDepthwiseSeparableASPPHead(ASPPHead):
     """Modded DeepLabV3+ Head
 

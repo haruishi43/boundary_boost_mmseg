@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
+from mmseg.registry import MODELS
 
 from .binary_edge_loss import balanced_binary_loss, weighted_binary_loss
-from ..builder import LOSSES
 
 
-@LOSSES.register_module()
+@MODELS.register_module()
 class MultiLabelEdgeLoss(nn.Module):
     """Class Balanced Multilabel Loss used in DFF"""
 
     def __init__(
         self,
-        loss_weight=1.0,
-        loss_name="loss_multilabel_edge",
-    ):
+        loss_weight: float = 1.0,
+        loss_name: str = "loss_mlbl_edge",
+    ) -> None:
         super().__init__()
         self.loss_weight = loss_weight
         self._loss_name = loss_name
 
     def forward(
         self,
-        edge,  # logits
-        edge_label,
-        weight=None,
+        edge: torch.Tensor,  # logits
+        edge_label: torch.Tensor,
+        weight: Optional[torch.Tensor] = None,
         **kwargs,
-    ):
+    ) -> torch.Tensor:
         loss_total = 0
 
         # FIXME: could optimize for batched loss
@@ -60,14 +62,14 @@ class MultiLabelEdgeLoss(nn.Module):
         return self._loss_name
 
 
-@LOSSES.register_module()
+@MODELS.register_module()
 class BalancedMultiLabelLoss(nn.Module):
     def __init__(
         self,
-        sensitivity=10,
-        loss_weight=1.0,
-        loss_name="loss_balanced_multilabel_edge",
-    ):
+        sensitivity: int = 10,
+        loss_weight: float = 1.0,
+        loss_name: str = "loss_balanced_mlbl_edge",
+    ) -> None:
         super().__init__()
         self.sensitivity = sensitivity
         self.loss_weight = loss_weight
@@ -75,12 +77,12 @@ class BalancedMultiLabelLoss(nn.Module):
 
     def forward(
         self,
-        edge,  # logits
-        edge_label,
-        weight=None,
-        ignore_index=255,
+        edge: torch.Tensor,  # logits
+        edge_label: torch.Tensor,
+        weight: Optional[torch.Tensor] = None,
+        ignore_index: int = 255,
         **kwargs,
-    ):
+    ) -> torch.Tensor:
         loss_total = 0
 
         for i in range(edge_label.size(1)):  # iterate for classes
@@ -103,7 +105,7 @@ class BalancedMultiLabelLoss(nn.Module):
         return self._loss_name
 
 
-@LOSSES.register_module()
+@MODELS.register_module()
 class WeightedMultiLabelLoss(nn.Module):
     """Weighted Multi-label Loss
 
@@ -113,10 +115,10 @@ class WeightedMultiLabelLoss(nn.Module):
 
     def __init__(
         self,
-        num_classes=19,
-        loss_weight=1.0,
-        loss_name="loss_multilabel_bce_edge",
-    ):
+        num_classes: int = 19,
+        loss_weight: float = 1.0,
+        loss_name: str = "loss_multilabel_bce_edge",
+    ) -> None:
         super().__init__()
         self.loss_weight = loss_weight
         self._loss_name = loss_name
@@ -125,12 +127,12 @@ class WeightedMultiLabelLoss(nn.Module):
 
     def forward(
         self,
-        edge,  # logits
-        edge_label,
-        weight=None,
-        ignore_index=255,
+        edge: torch.Tensor,  # logits
+        edge_label: torch.Tensor,
+        weight: Optional[torch.Tensor] = None,
+        ignore_index: int = 255,
         **kwargs,
-    ):
+    ) -> torch.Tensor:
         loss_total = 0
 
         for i in range(edge_label.size(1)):  # iterate for classes

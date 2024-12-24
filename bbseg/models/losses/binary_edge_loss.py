@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..builder import LOSSES
+from mmseg.registry import MODELS
 
 
 def weighted_binary_loss(
-    edge,
-    edge_label,
-    alpha=1.0,
-    beta=1.0,
-    reduction="mean",
-    ignore_index=255,
-):
+    edge: torch.Tensor,
+    edge_label: torch.Tensor,
+    alpha: float = 1.0,
+    beta: float = 1.0,
+    reduction: str = "mean",
+    ignore_index: int = 255,
+) -> torch.Tensor:
+    """Weighted Binary Binary Cross Entropy Loss."""
     # input edge dim=4 (b, 1, h, w)
     # input edge_label dim=4 (b, 1, h, w)
     pos_index = edge_label == 1
     neg_index = edge_label == 0
-    ignore_index = edge_label > 1  # should be `ignore_index`
+    ignore_index = edge_label == ignore_index
+
+    # just set ignore_index to 0 to obtain loss
+    edge_label[ignore_index] = 0
 
     weight = torch.Tensor(edge.size()).fill_(0)
     pos_num = pos_index.sum()
@@ -39,16 +45,20 @@ def weighted_binary_loss(
 
 
 def balanced_binary_loss(
-    edge,
-    edge_label,
-    reduction="mean",
-    ignore_index=255,
-    sensitivity=10,
-):
+    edge: torch.Tensor,
+    edge_label: torch.Tensor,
+    sensitivity: int = 10,
+    reduction: str = "mean",
+    ignore_index: int = 255,
+) -> torch.Tensor:
     # input edge dim=4 (b, 1, h, w)
     # input edge_label dim=4 (b, 1, h, w)
+    ignore_index = edge_label == ignore_index
     pos_index = edge_label == 1
     neg_index = edge_label == 0
+
+    # just set ignore_index to 0 to obtain loss
+    edge_label[ignore_index] = 0
 
     pos_num = pos_index.sum()
     neg_num = neg_index.sum()
@@ -58,23 +68,30 @@ def balanced_binary_loss(
 
     w = torch.tensor([pos_weight], device=edge.device)
 
-    return F.binary_cross_entropy_with_logits(
+    loss = F.binary_cross_entropy_with_logits(
         edge,
         edge_label.float(),
-        reduction=reduction,
+        reduction="none",
         pos_weight=w.reshape(1, 1, 1, 1),
     )
 
+    loss = loss * (1 - ignore_index.float())
 
-@LOSSES.register_module()
+    if reduction == "mean":
+        return loss.mean()
+    else:
+        return loss
+
+
+@MODELS.register_module()
 class BinaryEdgeLoss(nn.Module):
     def __init__(
         self,
-        loss_weight=1.0,
-        alpha=1.0,
-        beta=1.0,
-        loss_name="loss_binary_edge",
-    ):
+        loss_weight: float = 1.0,
+        alpha: float = 1.0,
+        beta: float = 1.0,
+        loss_name: str = "loss_binary_edge",
+    ) -> None:
         super().__init__()
         self.loss_weight = loss_weight
         self._loss_name = loss_name
@@ -83,12 +100,12 @@ class BinaryEdgeLoss(nn.Module):
 
     def forward(
         self,
-        edge,  # logits
-        edge_label,
-        weight=None,
-        ignore_index=255,
+        edge: torch.Tensor,  # logits
+        edge_label: torch.Tensor,
+        weight: Optional[torch.Tensor] = None,
+        ignore_index: int = 255,
         **kwargs,
-    ):
+    ) -> torch.Tensor:
         return self.loss_weight * weighted_binary_loss(
             edge=edge,
             edge_label=edge_label,
@@ -103,25 +120,25 @@ class BinaryEdgeLoss(nn.Module):
         return self._loss_name
 
 
-@LOSSES.register_module()
+@MODELS.register_module()
 class ConsensusBinaryEdgeLoss(nn.Module):
     def __init__(
         self,
-        loss_weight=1.0,
-        loss_name="loss_conbin_edge",
-    ):
+        loss_weight: float = 1.0,
+        loss_name: str = "loss_conbin_edge",
+    ) -> None:
         super().__init__()
         self.loss_weight = loss_weight
         self._loss_name = loss_name
 
     def forward(
         self,
-        edge,  # logits
-        edge_label,
-        weight=None,
-        ignore_index=255,
+        edge: torch.Tensor,  # logits
+        edge_label: torch.Tensor,
+        weight: Optional[torch.Tensor] = None,
+        ignore_index: int = 255,
         **kwargs,
-    ):
+    ) -> torch.Tensor:
         return self.loss_weight * weighted_binary_loss(
             edge=edge,
             edge_label=edge_label,

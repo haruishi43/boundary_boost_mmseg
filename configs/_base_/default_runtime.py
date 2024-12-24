@@ -1,19 +1,20 @@
-# yapf:disable
-log_config = dict(
-    interval=50,
-    hooks=[
-        dict(type="TextLoggerHook", by_epoch=False),
-        # dict(type="TensorboardLoggerHook"),
-    ],
+default_scope = "mmseg"
+
+# add semiseg
+custom_imports = dict(imports=["bbseg"], allow_failed_imports=False)
+
+env_cfg = dict(
+    cudnn_benchmark=True,
+    mp_cfg=dict(mp_start_method="fork", opencv_num_threads=0),
+    dist_cfg=dict(backend="nccl"),
 )
-# yapf:enable
-dist_params = dict(backend="nccl")
+vis_backends = [dict(type="LocalVisBackend")]
+visualizer = dict(
+    type="SegLocalVisualizer", vis_backends=vis_backends, name="visualizer"
+)
+log_processor = dict(by_epoch=False)
 log_level = "INFO"
 load_from = None
-resume_from = None
-workflow = [("train", 1)]
-cudnn_benchmark = True
+resume = False
 
-# Unused parameters: https://github.com/open-mmlab/mmcv/issues/1601
-# enabling this seems a bit faster, which is contradicts the warnings
-# find_unused_parameters = True
+tta_model = dict(type="SegTTAModel")

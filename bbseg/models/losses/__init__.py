@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from .accuracy import calc_metrics
+from .edge_metrics import calc_edge_metrics
 from .binary_edge_loss import BinaryEdgeLoss, ConsensusBinaryEdgeLoss
 from .multilabel_edge_loss import (
     MultiLabelEdgeLoss,
@@ -9,7 +9,7 @@ from .multilabel_edge_loss import (
 )
 
 __all__ = [
-    "calc_metrics",
+    "calc_edge_metrics",
     "BinaryEdgeLoss",
     "ConsensusBinaryEdgeLoss",
     "MultiLabelEdgeLoss",

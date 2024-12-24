@@ -3,20 +3,40 @@
 import torch
 
 
-def calc_metrics(pred, target, thresh=0.7, dtype=torch.float):
-    # TODO: uses too much memory
+def calc_edge_metrics(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    thresh: float = 0.7,
+    ignore_index: int = 255,
+    dtype=torch.float,
+) -> dict:
+    """Calculate Metrics.
+
+    - Accuracy
+    - Precision
+    - Recall
+    - F1
+    """
+
     # feed prediction logits through sigmoid
     pred = torch.sigmoid(pred)
 
-    # TODO: check if binary edge would also work
-    # FIXME: need to figure out the correct dtype; sometimes it outputs LongTensor
-
-    assert pred.shape == target.shape, f"pred: {pred.shape} != target: {target.shape}"
-
     # FIXME: this allocates a bit of gpu memory
     # https://github.com/pytorch/pytorch/issues/30246
-    tpred = pred > thresh
-    ttarget = target > thresh  # to binary
+    pred = pred.cpu()
+    target = target.cpu()
+
+    # TODO: check if binary edge would also work
+    # FIXME: need to figure out the correct dtype; sometimes it outputs LongTensor
+    assert pred.shape == target.shape, f"pred: {pred.shape} != target: {target.shape}"
+
+    # mask out invalid pixels, but keep the shape
+    valid_mask = target != ignore_index
+    target = target * valid_mask
+    # print(torch.unique(target))
+
+    tpred = pred >= thresh
+    ttarget = target >= thresh  # to binary
 
     all_tp = tpred[tpred == ttarget].sum(dtype=dtype)
     all_preds = tpred.sum(dtype=dtype)

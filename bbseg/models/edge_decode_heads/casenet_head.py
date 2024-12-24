@@ -1,53 +1,56 @@
 #!/usr/bin/env python3
 
+"""Implementation of CASENet head."""
+
 import torch.nn as nn
 
-from .base_multisupervision_head import BaseMultiSupervisionHead
-from ..builder import HEADS
+from mmseg.registry import MODELS
+
+from .base_edge_decode_head import BaseEdgeDecodeHead
 from ..utils import GroupedConvFuse, SideConv
 
 
-@HEADS.register_module()
-class GeneralizedCASENetHead(BaseMultiSupervisionHead):
+@MODELS.register_module()
+class CASENetHead(BaseEdgeDecodeHead):
     def __init__(
         self,
-        resize_index=-1,  # input image size
-        edge_key="fuse",
-        log_edge_keys=("fuse", "last"),
-        binary_keys=[],
-        multilabel_keys=("fuse", "last"),
-        loss_binary=None,
-        loss_multilabel=dict(type="MultiLabelEdgeLoss", loss_weight=1.0),
+        pred_key="fuse",
+        log_keys=("fuse", "last"),
+        loss_decode=dict(
+            mlbl=dict(
+                fuse=dict(type="MultiLabelEdgeLoss", loss_weight=1.0),
+                last=dict(type="MultiLabelEdgeLoss", loss_weight=1.0),
+            ),
+        ),
+        resize_index=-1,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
             input_transform="multiple_select",
-            edge_key=edge_key,
-            log_edge_keys=log_edge_keys,
-            binary_keys=binary_keys,
-            multilabel_keys=multilabel_keys,
-            loss_binary=loss_binary,
-            loss_multilabel=loss_multilabel,
+            pred_key=pred_key,
+            log_keys=log_keys,
+            loss_decode=loss_decode,
             **kwargs,
         )
 
         self.resize_index = resize_index
 
         _interp = "bilinear"  # nearest
-        _bias = False
+        _side_bias = False
+        _last_bias = True
+        _fuse_bias = True
 
         # bias should not be turn on when some of the sides are not supervised
 
         sides = []
-
         for i in range(len(self.in_channels) - 1):
             sides.append(
                 SideConv(
                     in_channels=self.in_channels[i],
                     out_channels=1,
                     conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg,  # bias instead of bn
-                    bias=_bias,  # add bias in the last layer
+                    norm_cfg=self.norm_cfg,
+                    bias=_side_bias,
                     act_cfg=self.act_cfg,
                     interpolation=_interp,
                     align_corners=self.align_corners,
@@ -60,8 +63,8 @@ class GeneralizedCASENetHead(BaseMultiSupervisionHead):
                 in_channels=self.in_channels[-1],
                 out_channels=self.num_classes,
                 conv_cfg=self.conv_cfg,
-                norm_cfg=self.norm_cfg,  # bias instead of bn
-                bias=_bias,
+                norm_cfg=self.norm_cfg,
+                bias=_last_bias,
                 act_cfg=self.act_cfg,
                 interpolation=_interp,
                 align_corners=self.align_corners,
@@ -73,18 +76,19 @@ class GeneralizedCASENetHead(BaseMultiSupervisionHead):
             num_classes=self.num_classes,
             num_sides=len(sides),
             conv_cfg=self.conv_cfg,
-            bias=_bias,  # originally true
+            bias=_fuse_bias,
         )
 
     def forward(self, inputs):
-        x = [i for i in inputs]
-        assert isinstance(x, list)
-        # get the input image size
-        bs, c, h, w = x[self.resize_index].shape
-        resize_to = (h, w)  # TODO: might be too large
+        x = self._transform_inputs(inputs)
 
-        # remove the input image and unused features
-        x = [x[i] for i in self.in_index]
+        if self.pass_input_image:
+            h, w = x[self.resize_index].shape[2:]
+            _ = x.pop()  # remove image if exists
+            resize_to = (h, w)
+        else:
+            h, w = x[self.resize_index].shape[2:]
+            resize_to = (h, w)
 
         side_outs = []
         for i, layer in enumerate(self.sides):
@@ -93,8 +97,3 @@ class GeneralizedCASENetHead(BaseMultiSupervisionHead):
         fuse = self.fuse(side_outs)
 
         return dict(fuse=fuse, last=side_outs[-1])
-
-
-@HEADS.register_module()
-class AuxCASENetHead(GeneralizedCASENetHead):
-    ...

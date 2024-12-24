@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from .custom_encoder_decoder import CustomEncoderDecoder, SBCBEncoderDecoder
+from .seg_edge_encoder_decoder import SegEdgeEncoderDecoder
 
 __all__ = [
-    "CustomEncoderDecoder",
-    "SBCBEncoderDecoder",
+    "SegEdgeEncoderDecoder",
 ]

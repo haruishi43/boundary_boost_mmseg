@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
-from .builder import DATASETS
-from .custom import OTFCustomJointDataset
+from typing import Dict, Optional, Sequence
 
+from mmseg.registry import DATASETS
 from pyEdgeEval.datasets.cityscapes_attributes import (
     CITYSCAPES_inst_labelIds,
     CITYSCAPES_labelIds,
     CITYSCAPES_label2trainId,
 )
+
+from .base_joint_dataset import BaseSegEdgeDataset
+from .base_otf_dataset import BaseOTFEdgeDataset
+
 
 CITYSCAPES_CLASSES = (
     "road",
@@ -55,41 +59,85 @@ ignore_ids = [2, 3]
 
 
 @DATASETS.register_module()
-class OTFJointCityscapesDataset(OTFCustomJointDataset):
-    """OTF edge generation for Cityscapes dataset
+class CityscapesSegEdgeDataset(BaseSegEdgeDataset):
+    """Cityscapes dataset with semseg and edge detection.
 
-    - should only be used for training the model
+    Currently, I don't preprocess the boundaries as binary edge masks, so
+    I load the multi-label edge masks. If you want binary edge masks, you can
+    use the `GenerateBinaryFromMultiLabel` transform.
     """
 
-    CLASSES = CITYSCAPES_CLASSES
-    PALETTE = CITYSCAPES_PALETTE
+    METAINFO = dict(
+        classes=CITYSCAPES_CLASSES,
+        palette=CITYSCAPES_PALETTE,
+    )
 
     def __init__(
         self,
-        img_suffix="_leftImg8bit.png",
-        seg_map_suffix="_gtFine_labelIds.png",
-        inst_map_suffix="_gtFine_instanceIds.png",
-        inst_sensitive=True,  # default instance sensitive
-        labelIds=CITYSCAPES_labelIds,
-        inst_labelIds=CITYSCAPES_inst_labelIds,
-        ignore_indicies=[2, 3],
-        label2trainId=CITYSCAPES_label2trainId,
+        img_suffix: str = "_leftImg8bit.png",
+        seg_map_suffix="_gtFine_labelTrainIds.png",
+        inst_sensitive: bool = True,
+        thin: bool = False,
+        edge_mode: str = "mlbl",
+        test_mode: bool = False,
         **kwargs,
-    ):
-        super(OTFJointCityscapesDataset, self).__init__(
+    ) -> None:
+        if inst_sensitive:
+            if test_mode:
+                if thin:
+                    mlbl_edge_suffix = "_gtProc_thin_isedge.png"
+                else:
+                    mlbl_edge_suffix = "_gtProc_raw_isedge.png"
+            else:
+                mlbl_edge_suffix = "_gtProc_isedge.png"
+        else:
+            if test_mode:
+                if thin:
+                    mlbl_edge_suffix = "_gtProc_thin_edge.png"
+                else:
+                    mlbl_edge_suffix = "_gtProc_raw_edge.png"
+            else:
+                mlbl_edge_suffix = "_gtProc_edge.png"
+
+        super().__init__(
+            img_suffix=img_suffix,
+            seg_map_suffix=seg_map_suffix,
+            mlbl_edge_suffix=mlbl_edge_suffix,
+            edge_mode=edge_mode,
+            test_mode=test_mode,
+            **kwargs,
+        )
+
+
+@DATASETS.register_module()
+class CityscapesOTFEdgeDataset(BaseOTFEdgeDataset):
+    """OTF edge generation for Cityscapes dataset."""
+
+    METAINFO = dict(
+        classes=CITYSCAPES_CLASSES,
+        palette=CITYSCAPES_PALETTE,
+    )
+
+    def __init__(
+        self,
+        img_suffix: str = "_leftImg8bit.png",
+        seg_map_suffix: str = "_gtFine_labelIds.png",
+        inst_map_suffix: str = "_gtFine_instanceIds.png",
+        inst_sensitive: bool = True,
+        labelIds: Optional[Sequence] = CITYSCAPES_labelIds,
+        inst_labelIds: Optional[Sequence] = CITYSCAPES_inst_labelIds,
+        ignore_indices: Optional[Sequence] = ignore_ids,
+        label2trainId: Optional[Dict] = CITYSCAPES_label2trainId,
+        **kwargs,
+    ) -> None:
+        super().__init__(
             img_suffix=img_suffix,
             seg_map_suffix=seg_map_suffix,
             inst_map_suffix=inst_map_suffix,
             inst_sensitive=inst_sensitive,
             labelIds=labelIds,
             inst_labelIds=inst_labelIds,
-            ignore_indices=ignore_indicies,
+            ignore_indices=ignore_indices,
             label2trainId=label2trainId,
             **kwargs,
         )
-
-    def format_results(self, **kwargs):
-        raise ValueError("ERR: Should not use OTF for test set")
-
-    def evaluate(self, **kwargs):
-        raise ValueError("ERR: Should not use OTF for evaluation!")

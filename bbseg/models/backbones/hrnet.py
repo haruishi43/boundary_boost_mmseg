@@ -4,16 +4,15 @@ import warnings
 
 import torch
 import torch.nn as nn
-
 from mmcv.cnn import build_conv_layer, build_norm_layer
-from mmcv.runner import BaseModule, Sequential
-from mmcv.utils.parrots_wrapper import _BatchNorm
+from mmengine.model import BaseModule, Sequential
+from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm
 
+
+from mmseg.registry import MODELS
 from mmseg.models.backbones.resnet import BasicBlock, Bottleneck
 from mmseg.models.backbones.hrnet import HRModule
-from mmseg.ops import Upsample, resize
-
-from ..builder import BACKBONES
+from mmseg.models.utils import Upsample, resize
 
 
 class ModHRModule(HRModule):
@@ -117,7 +116,7 @@ class ModHRModule(HRModule):
         return nn.ModuleList(fuse_layers)
 
 
-@BACKBONES.register_module()
+@MODELS.register_module()
 class ModHRNet(BaseModule):
     """Modified HRNet backbone."""
 
